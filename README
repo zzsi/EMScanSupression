@@ -1,0 +1,4 @@
+This project is about learning visual words as deformable templates, using sparse coding principle.
+It is achieved by EM clustering on a large number of image patches collected from large images. 
+
+Run StartFromHere.m in Matlab, and monitor intermediate results in the folder ./output/ .
