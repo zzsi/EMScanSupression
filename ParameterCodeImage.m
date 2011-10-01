@@ -9,6 +9,7 @@ supressionModeInEStep = 'MatchingPursuit'; % matching pursuit in E step (other o
 templateSize = [72 72];
 templateSize = single(templateSize);
 partSize = floor(sqrt(templateSize(1)*templateSize(2))); % alias for the template size (radius)
+numRandomStart = 3;
 %% parameters for EM clustering
 locationPerturbationFraction = .25; % the size of neighborhood for MAX2 pooling, as well as surround supression
 rotationRange = 0:2:0; % allowed global rotation of the template
