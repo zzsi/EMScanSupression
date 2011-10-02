@@ -147,7 +147,7 @@ for img = selected_img
 	alpha = .6;
     tmp = tmp * alpha + matchedSym * (1-alpha);
     imwrite( tmp, sprintf('%s/overlayed_image%d.png',destFolder,img) );
-    
+    imwrite( matchedSym, sprintf('%s/sketch_image%d.png',destFolder,img) );
 end
 fprintf(1,'\n');
 

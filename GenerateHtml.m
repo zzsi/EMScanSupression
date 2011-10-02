@@ -71,12 +71,12 @@ fprintf( html, '\n<tr><td>\n' );
 fprintf( html, '\n<b>Code and data: (<a href="%s">ZIP</a>).</b>\n', zipname );
 fprintf( html, '\n</td>\n' );
 fprintf( html, '\n<td>\n' );
-fprintf( html, '\n<a href="http://www.stat.ucla.edu/~zzsi/HAB/exp2/exp2_changelog.html">Change Log</a>\n' );
+fprintf( html, '\n<a href="http://www.stat.ucla.edu/~zzsi/HAB/hab_changelog.html">Change Log</a>\n' );
 fprintf( html, '\n</td>\n' );
 fprintf( html, '\n</tr>\n' );
 fprintf( html, '\n<tr>\n' );
 fprintf( html, '\n<td colspan=2 align=left>\n' );
-fprintf( html, '\nRun StartFromHere.m in matlab. The result files are saved in the root directory. \n' );
+fprintf( html, '\nRun StartFromHere.m in Matlab. You can monitor intermediate results in the folder: output/. \n' );
 fprintf( html, '\n</td>\n' );
 fprintf( html, '\n</tr>\n' );
 fprintf( html, '\n</table>\n' );
@@ -140,13 +140,20 @@ fprintf( html, '\n</p>\n' );
 
 %% show sketched images
 fprintf( html, ['<div style="border-bottom:1 solid #dddddd; margin-top:0.3em;"></div>\n<a name="templates"></a><p>' ...
-	'Sketched images using activated templates:' 
+	'Sketching the observed images by overlaying the activated templates on them:' ...
 	'</p>\n']);
 fprintf( html, '\n<p>' );
 for i = 1:length(Iname)
 	fprintf( html, '<img src="%s" alt="" height=80/>', sprintf('%s/overlayed_image%d.png',imFolder,i) );
 end
 fprintf( html, '\n</p>\n' );
+
+fprintf( html, '\n<p>Showing only the activated templates (for visual clarity): </p><p>' );
+for i = 1:length(Iname)
+	fprintf( html, '<img src="%s" alt="" height=80/>', sprintf('%s/sketch_image%d.png',imFolder,i) );
+end
+fprintf( html, '\n</p>\n' );
+
 
 %% finishing off
 fprintf( html, '\n\n\n</div> \n');

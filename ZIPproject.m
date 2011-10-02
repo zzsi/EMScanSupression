@@ -61,7 +61,16 @@ end
 names = dir('storedExponentialModel*.mat');
 for i = 1:length(names)
     if names(i).name(1) ~= '.'
-        filelist{count} = sprintf('working/%s',names(i).name);
+        filelist{count} = sprintf('%s',names(i).name);
+        disp([num2str(count) ': added ' filelist{count}]);
+        count = count + 1;
+    end
+end
+
+names = dir('learning_result.mat');
+for i = 1:length(names)
+    if names(i).name(1) ~= '.'
+        filelist{count} = sprintf('%s',names(i).name);
         disp([num2str(count) ': added ' filelist{count}]);
         count = count + 1;
     end

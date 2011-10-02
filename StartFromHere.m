@@ -145,6 +145,7 @@ for iRS = 1:numRandomStart
             if ~isempty(im)
                 imwrite(im,sprintf('output/cluter%d_iter%d.png',cc,iter));
             else
+                syms{cc} = zeros(templateSize,'single');
                 continue;
             end
 
@@ -181,11 +182,11 @@ for iRS = 1:numRandomStart
         % transform the templates
         S2Templates = cell(numCluster,1);
         for cc = 1:numCluster
-            load(sprintf('working/learnedmodel%d_iter%d.mat',cc,iter), 'numElement', 'selectedOrient', 'selectedx', 'selectedy', 'selectedlambda', 'selectedLogZ');
+            load(sprintf('working/learnedmodel%d_iter%d.mat',cc,iter), 'numElement', 'selectedOrient', 'selectedx', 'selectedy', 'selectedlambda', 'selectedLogZ', 'commonTemplate');
             S2Templates{cc} = struct( 'selectedRow', single(selectedx -1 - floor(templateSize(1)/2)),...
                 'selectedCol', single(selectedy -1 - floor(templateSize(2)/2)), ...
                 'selectedOri', single(selectedOrient), 'selectedScale', zeros(length(selectedx),1,'single'), ...
-                'selectedLambda', single(selectedlambda), 'selectedLogZ', single(selectedLogZ) );
+                'selectedLambda', single(selectedlambda), 'selectedLogZ', single(selectedLogZ), 'commonTemplate', commonTemplate );
         end
         TransformedTemplate = cell(nTransform,numCluster);
         selectedScale = zeros(1,length(selectedx),'single');
@@ -289,11 +290,11 @@ end
 %% display the templates and cluster members for the best random starting point
 activations = bestActivations;
 S2Templates = bestS2Templates;
-activatedImg = activations(1,:);
-activatedCluster = ceil( ( activations(4,:) + 1 ) / nTransform ); % starts from 1
-activatedTransform = activations(4,:) + 1 - (activatedCluster-1) * nTransform; % starts from 1
+activatedImg = activations(5,:);
+activatedCluster = ceil( ( activations(3,:) + 1 ) / nTransform ); % starts from 1
+activatedTransform = activations(3,:) + 1 - (activatedCluster-1) * nTransform; % starts from 1
 mixing = bestMixing;
-bestAveLogL = aveLogL;
+aveLogL = bestAveLogL;
 for cc = 1:numCluster
 	ind = find(activatedCluster == cc);
 	% sample a subset of training postitives, if necessary
@@ -330,7 +331,7 @@ for cc = 1:numCluster
 end
 towrite = displayImages(syms,10,templateSize(1),templateSize(2));
 imwrite(towrite,sprintf('output/template.png'));
-save(sprintf('output/learning_result.mat'),'bestActivations','bestS2Templates','bestOverallScore','bestInitialClusters','bestAveLogL','bestMixing');
+save(sprintf('learning_result.mat'),'bestActivations','bestS2Templates','bestOverallScore','bestInitialClusters','bestAveLogL','bestMixing');
 
 % rank the learned templates
 [sorted idx] = sort( sqrt(mixing) .* aveLogL, 'descend' );
