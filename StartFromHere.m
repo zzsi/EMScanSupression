@@ -130,6 +130,7 @@ for iRS = 1:numRandomStart
                     load(SUM1MAX1mapName, 'SUM1map', 'J' );
                 end
                 % use mex-C code instead: crop S1 map
+				% warning: if the templates are of different sizes, we need to alter outRow and outCol (use only a subset of it).
                 tScale = 0; destHeight = templateSize(1); destWidth = templateSize(2); nScale = 1; reflection = 1;
                 SUM1mapLearn(iMember,:) = mexc_CropInstance( SUM1map(1+activations(4,ind(iMember)),:),...
                     activations(2,ind(iMember))-1,...

@@ -10,6 +10,7 @@ templateSize = [60 60];
 templateSize = single(templateSize);
 partSize = floor(sqrt(templateSize(1)*templateSize(2))); % alias for the template size (radius)
 resizeTrainingImages = true;
+constantImageArea = 150^2; % for resizing images (keep a constant area)
 numRandomStart = 3;
 %% parameters for EM clustering
 locationPerturbationFraction = .25; % the size of neighborhood for MAX2 pooling, as well as surround supression
@@ -22,13 +23,20 @@ S1softthres = 0.9; % soft thresholding cutting-off for S1 maps
 numIter = 10; % number of EM iterations
 %% parameters for active basis
 numCluster = 30; % number of data clusters
-numElement = 10; % number of Gabors in active basis at the first scale
+numElement = 12; % number of Gabors in active basis at the first scale
 epsilon = .1; % allowed correlation between selected Gabors 
 subsample = 1; subsampleM1 = 1; % subsample in computing MAX1 maps
 locationShiftLimit = 3; % shift in normal direction = locationShiftLimit*subsample pixels
 orientShiftLimit = 1; % shift in orientation
+%% parameters for detection (controls scaling of templates)
+inhibitFind = -1;  % whether to apply inhibition after detection for re-computing MAX2 score
+resolutionGap = .1; % gap between consecutive resolutions in detection
+numExtend = 1; % number of gaps extended both below and above zero
+numResolution = numExtend*2 + 1;  % number of resolutions to search for in detection stage
+originalResolution = numExtend + 1; % original resolution is the one at which the imresize factor = 1
+allResolution = (-numExtend : numExtend)*resolutionGap + 1.;
 %% parameters for Gabor filters
-numScale = 1;
+numScale = 1; % number of Gabor scales (don't change it)
 scales = 0.7; % scales of Gabor wavelets 
 numOrient = 16;  % number of orientations
 saturation = 6.; % saturation level for sigmoid transformation
@@ -45,14 +53,6 @@ if (localOrNot>0)
     windowNormalizeOrNot = -1;
 end % if we use local normalization, we should not use window normalization in detection
 thresholdFactor = .01;  % divide the response by max(average, maxAverage*thresholdFactor)
-
-%% parameters for detection
-inhibitFind = -1;  % whether to apply inhibition after detection for re-computing MAX2 score
-resolutionGap = .1; % gap between consecutive resolutions in detection
-numExtend = 1; % number of gaps extended both below and above zero
-numResolution = numExtend*2 + 1;  % number of resolutions to search for in detection stage
-originalResolution = numExtend + 1; % original resolution is the one at which the imresize factor = 1
-allResolution = (-numExtend : numExtend)*resolutionGap + 1.;
 
 %% read in positive images
 sizeTemplatex = templateSize(1);
@@ -71,7 +71,7 @@ for img = 1 : numImage
 
     sx = size(tmpIm,1); sy = size(tmpIm,2);
     if resizeTrainingImages
-    	tmpIm = imresize( tmpIm, 150/sqrt(sx*sy), 'bilinear' );
+    	tmpIm = imresize( tmpIm, sqrt(constantImageArea/(sx*sy)), 'bilinear' );
     end
     Ioriginal{img} = single(tmpIm);
     J0 = Ioriginal{img};
@@ -124,7 +124,8 @@ for iT = 1:nTransform
 		    templateTransform{iT}(4),inRow,inCol,inO,inS,numOrient);
 end
 
-save('partLocConfig.mat','templateSize',...
+save('partLocConfig.mat','templateSize','scales','numRandomStart','maxNumClusterMember',...
+	'S2Thres','S1softthres','allResolution','resizeTrainingImages','constantImageArea',...
     'category','numOrient','localOrNot','subsample','saturation','locationShiftLimit','orientShiftLimit',...
     'numElement','thresholdFactor','doubleOrNot', 'numCluster', 'numIter', 'subsampleS2', 'locationPerturbationFraction',...
     'partSize','rotationRange','nTransform','templateTransform','S1softthres','subsampleM1','localHalfx','localHalfy',...

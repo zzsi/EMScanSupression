@@ -6,7 +6,7 @@ close all;
 maxDisplayImg = 60;
 
 % load the starting image number
-load partLocConfig templateSize category locationShiftLimit orientShiftLimit numElement numCluster numIter
+load partLocConfig % templateSize category locationShiftLimit orientShiftLimit numElement numCluster numIter
 
 zipname = sprintf('EMScanSupression_%s.zip',date);
 imFolder = 'EMScanSupression';
@@ -80,6 +80,39 @@ fprintf( html, '\nRun StartFromHere.m in Matlab. You can monitor intermediate re
 fprintf( html, '\n</td>\n' );
 fprintf( html, '\n</tr>\n' );
 fprintf( html, '\n</table>\n' );
+
+%% explain the parameters
+fprintf(html, '<div style="border-top:1 solid #dddddd; margin-top:0.3em;"></div> ');
+fprintf(html, '\n<p><b>Parameters</b>. ');
+fprintf( html, sprintf('The size of each active basis template is %d (width) by %d (height) pixels. ',templateSize(2),templateSize(1)));
+fprintf( html, sprintf('Maximum number of Gabor elements in each template is %d. ',numElement));
+fprintf( html, sprintf('For Gabor wavelets we use a scale of %.2f and %d quantized orientations within PI (in radian). ',scales,numOrient));
+fprintf( html, sprintf('Each Gabor element is allowed to move %d pixels and rotate %d orientation step(s) at most. ',locationShiftLimit,orientShiftLimit));
+fprintf( html, sprintf('We perform soft thresholding at %.2f on SUM1 scores (Gabor responses) to reduce background clutter. </p\n> ',S1softthres) );
+
+fprintf( html, sprintf('<p>In total we learn %d active basis templates (i.e. clusters). ',numCluster));
+fprintf( html, sprintf('For EM learning, we randomly start at %d initializations. ',numRandomStart));
+fprintf( html, sprintf('Then %d EM iterations are carried out. ',numIter));
+fprintf( html, sprintf('In the M step, for each cluster we use a maximum of %d examples to re-learn the active basis model. ',maxNumClusterMember));
+fprintf( html, sprintf('In the E step, the activated templates need to have a SUM2 score of at least %d. ',S2Thres));
+fprintf( html, sprintf('For local inhibition between templates, the minimum distance between two activated template is %.2f times the size of template. ',locationPerturbationFraction));
+fprintf( html, sprintf('In later EM iterations, this is increased to %.2f resulting in sparser representation. ',locationPerturbationFraction_final));
+fprintf( html, sprintf('Allowed template rotations: ['));
+fprintf( html, sprintf('%d',rotationRange(1)) );
+for rr = rotationRange(2:end)
+	fprintf( html, sprintf(', %d',rr) );
+end
+fprintf( html, ']. ');
+fprintf( html, sprintf('Allowed image resolutions (relative): ['));
+fprintf( html, sprintf('%.2f',allResolution(1)) );
+for rr = allResolution(2:end)
+	fprintf( html, sprintf(', %.2f',rr) );
+end
+fprintf( html, ']. ');
+if resizeTrainingImages
+	fprintf( html, sprintf('As a pre-processing step, the input images are resized so that the image area is roughly %d pixels. ',constantImageArea));
+end
+fprintf( html, '</p>\n ');
 
 %% training examples
 fprintf(html, '<div style="border-top:1 solid #dddddd; margin-top:0.3em;"></div><h2> ');
