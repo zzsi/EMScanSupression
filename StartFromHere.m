@@ -373,17 +373,19 @@ save(sprintf('learning_result.mat'),'bestActivations','bestS2Templates','bestOve
 nonempty_clusters = find(cluster_is_nonempty);
 mixing = mixing(nonempty_clusters);
 aveLogL = aveLogL(nonempty_clusters);
+syms = syms(nonempty_clusters);
+syms2 = syms;
 [sorted idx] = sort( sqrt(mixing) .* aveLogL, 'descend' );
-for i = 1:numel(syms(nonempty_clusters))
-    towrite = syms{i};
+for i = 1:numel(sorted)
+    towrite = syms{idx(i)};
     if range(towrite) < 1
-        towrite = 255;
+        towrite(:) = 255;
     else
         towrite = uint8(255 * (towrite-min(towrite(:)))/(max(towrite(:))-min(towrite(:))));
         towrite = double(towrite) - 50;
     end
-    syms{i} = towrite;
+    syms2{i} = towrite;
 end
-towrite = displayImages( syms(idx([1:end])), 10, templateSize(1), templateSize(2), false );
+towrite = displayImages( syms2, 10, templateSize(1), templateSize(2), false );
 imwrite(towrite,sprintf('template_sorted.png'));
 

@@ -17,12 +17,12 @@ locationPerturbationFraction = .25; % the size of neighborhood for MAX2 pooling,
 locationPerturbationFraction_final = .4; % (used in later EM iterations) the size of neighborhood for MAX2 pooling, as well as surround supression
 rotationRange = 0:2:0; % allowed global rotation of the template
 subsampleS2 = 1; % subsampling step size for computing SUM2 maps
-maxNumClusterMember = 30; % maximum number of training examples in each cluster used in re-learning the template
 S2Thres = 5; % cut-off value for detected instances of the template
 S1softthres = 0.9; % soft thresholding cutting-off for S1 maps
 numIter = 10; % number of EM iterations
 %% parameters for active basis
 numCluster = 30; % number of data clusters
+maxNumClusterMember = 30; % (no need to change) maximum number of training examples in each cluster used in re-learning the template
 numElement = 12; % number of Gabors in active basis at the first scale
 epsilon = .1; % allowed correlation between selected Gabors 
 subsample = 1; subsampleM1 = 1; % subsample in computing MAX1 maps
