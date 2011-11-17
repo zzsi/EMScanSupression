@@ -1,28 +1,30 @@
 clear
 close all
 
+
+% activation: [imageID x y resolution templateInd score]
+
 %% mex-C compilation
 mex mexc_ComputeMAX1.cpp
 mex mexc_ComputeSUM2.cpp
 mex mexc_Histogram.cpp	% pool histogram from negative images
 mex mexc_LocalNormalize.cpp	% local normalization of type single (float)
 mex mexc_SharedSketch.cpp	% learning by shared sketch algorithm (with data weights)
-mex mexc_Sigmoid.cpp	% sigmoid transformation
 mex mexc_ComputeMAX2.cpp
 mex mexc_ComputeMAX2MP.cpp
 mex mexc_TemplateAffineTransform.cpp
-mex mexc_CropInstanceNew.cpp
+mex mexc_CropInstance.cpp
 
 %% preparation
 
 ParameterCodeImage;
+SUM1MAX1;
 ExponentialModel; close all
 storeExponentialModelName = ['storedExponentialModel' num2str(1)];   
 load(storeExponentialModelName);
 storedlambda = single(storedlambda);
 storedExpectation = single(storedExpectation);
 storedLogZ = single(storedLogZ);
-SUM1MAX1;
 
 Correlation = CorrFilter(allFilter, epsilon);  % correlation between filters 
 for j = 1:numel(Correlation)
@@ -39,9 +41,6 @@ end
 % initialize: generate random SUM2 maps and thus random cluster members
 mixing = zeros(numCluster,1); % number of examples in each cluster
 aveLogL = zeros(numCluster,1); % average log likelihood in each cluster
-
-
-
 bestOverallScore = -inf;
 buf_length = 0;
 for iRS = 1:numRandomStart
@@ -52,12 +51,19 @@ for iRS = 1:numRandomStart
         % compute SUM2
         SUM1MAX1mapName = ['working/SUM1MAX1map' 'image' num2str(i) 'scale' num2str(1)];
         load(SUM1MAX1mapName, 'SUM1map');
-        width = floor(size(SUM1map{1},1)/subsampleS2);
-        height = floor(size(SUM1map{1},2)/subsampleS2);
-        SUM2map = cell(nTransform*numCluster,1);
-        for j = 1:nTransform*numCluster
-            map = single( rand( height, width ) );
-            SUM2map{j} = single( rand( height, width ) );
+        SUM2map = cell(nTransform*numCluster,numResolution);
+        for iRes = 1:numResolution
+		    width = floor(size(SUM1map{iRes,1},2)/subsampleS2);
+		    height = floor(size(SUM1map{iRes,1},1)/subsampleS2);
+		    for j = 1:nTransform*numCluster
+		        map = single( rand( height, width ) );
+		        SUM2map{j,iRes} = single( rand( height, width ) );
+		    end
+        end
+        % exclude the near-boundary region
+        for ii = 1:numel(SUM2map)
+            SUM2map{ii}(:,[1:floor(templateSize(2)/2) end-floor(templateSize(2)/2):end]) = min(-1001,S2Thres-1);
+            SUM2map{ii}([1:floor(templateSize(1)/2) end-floor(templateSize(1)/2):end],:) = min(-1001,S2Thres-1);
         end
 
         % compute MAX2, perform surround supression and get activations
@@ -65,17 +71,18 @@ for iRS = 1:numRandomStart
             tmpActivations = mexc_ComputeMAX2MP( SUM2map, int32(locationPerturbationFraction*partSize/subsampleS2), -1000 );
         elseif strcmp('LocalSurroundSurpression',supressionModeInEStep) == 1
             subsampleM2 = 1;
+            % warning: mexc_ComputeMAX2 does not handle multiscale image for now
             [MAX2map M2LocationTrace M2TemplateTrace M2RowColShift tmpActivations] = ...
                 mexc_ComputeMAX2( templateAffinityMatrix, SUM2map, locationPerturbationFraction, ...
                 int32(partSize/subsampleS2*ones(numCluster*nTransform,1)), subsampleM2 );
             tmpActivations = tmpActivations( :,tmpActivations(4,:) > -1000 );
         end
-        activations = [activations,[tmpActivations;single(i*ones(1,size(tmpActivations,2)))]];
+        activations = [activations,[single(i*ones(1,size(tmpActivations,2)));tmpActivations]];
     end
-    activations(1:2,:) = activations(1:2,:) * subsampleS2;
-    activatedCluster = ceil( ( activations(3,:) + 1 ) / nTransform );
-    activatedTransform = activations(3,:) + 1 - (activatedCluster-1) * nTransform;
-    activatedImg = activations(5,:);
+    activations(2:3,:) = activations(2:3,:) * subsampleS2;
+    activatedCluster = ceil( ( activations(5,:) + 1 ) / nTransform );
+    activatedTransform = activations(5,:) + 1 - (activatedCluster-1) * nTransform;
+    activatedImg = activations(1,:);
     initialClusters = activations;
     
     for iter = 1:numIter
@@ -100,7 +107,10 @@ for iRS = 1:numRandomStart
             % =====================================
             ind = find(activatedCluster == cc);
             mixing(cc) = length(ind);
-            aveLogL(cc) = mean(activations(4,ind));
+            aveLogL(cc) = mean(activations(6,ind));
+            if isnan(aveLogL(cc))
+            	aveLogL(cc) = -1;
+            end
             % sample a subset of training postitives, if necessary
             if length(ind) > maxNumClusterMember
                 idx = randperm(length(ind));
@@ -121,17 +131,22 @@ for iRS = 1:numRandomStart
                 end
                 % use mex-C code instead: crop S1 map
                 tScale = 0; destHeight = templateSize(1); destWidth = templateSize(2); nScale = 1; reflection = 1;
-                SUM1mapLearn(iMember,:) = mexc_CropInstanceNew( SUM1map,...
-                    activations(1,ind(iMember))-1,...
+                SUM1mapLearn(iMember,:) = mexc_CropInstance( SUM1map(1+activations(4,ind(iMember)),:),...
                     activations(2,ind(iMember))-1,...
-                    rotationRange(activatedTransform(ind(iMember))),tScale,reflection,destWidth,destHeight,numOrient,nScale );
+                    activations(3,ind(iMember))-1,...
+                    rotationRange(activatedTransform(ind(iMember))),tScale,reflection,...
+                    outRow{activatedTransform(ind(iMember))},outCol{activatedTransform(ind(iMember))},...
+                    numOrient,nScale,destWidth,destHeight );
 
                 % Crop detected image patch for visualization
-                srcIm = J{1};
-                cropped(iMember) = mexc_CropInstanceNew( {single(srcIm)},...
-                    activations(1,ind(iMember))-1,...
+                srcIm = J{1+activations(4,ind(iMember))};
+                tmpNumOrient = 1;
+                cropped(iMember) = mexc_CropInstance( {single(srcIm)},...
                     activations(2,ind(iMember))-1,...
-                    rotationRange(activatedTransform(ind(iMember))),0,reflection,destWidth,destHeight,1,1 );
+                    activations(3,ind(iMember))-1,...
+                    rotationRange(activatedTransform(ind(iMember))),tScale,reflection,...
+                    outRow{activatedTransform(ind(iMember))},outCol{activatedTransform(ind(iMember))},...
+                    tmpNumOrient,nScale,destWidth,destHeight );
 
                 % local max
                 subsampleM1 = 1;
@@ -146,6 +161,15 @@ for iRS = 1:numRandomStart
                 imwrite(im,sprintf('output/cluter%d_iter%d.png',cc,iter));
             else
                 syms{cc} = zeros(templateSize,'single');
+                if iter>1
+                	copyfile(sprintf('working/learnedmodel%d_iter%d.mat',cc,iter-1),sprintf('working/learnedmodel%d_iter%d.mat',cc,iter));
+                else
+                	selectedLogZ(:) = 1;
+		            save(sprintf('working/learnedmodel%d_iter%d.mat',cc,iter), 'numElement', 'selectedOrient',...
+				        'selectedx', 'selectedy', 'selectedlambda', 'selectedLogZ',...
+				        'commonTemplate');
+                end
+                
                 continue;
             end
 
@@ -166,8 +190,7 @@ for iRS = 1:numRandomStart
 
             save(sprintf('working/learnedmodel%d_iter%d.mat',cc,iter), 'numElement', 'selectedOrient',...
                 'selectedx', 'selectedy', 'selectedlambda', 'selectedLogZ',...
-                'commonTemplate'...
-            );
+                'commonTemplate');
 
             syms{cc} = -commonTemplate;
         end
@@ -226,10 +249,17 @@ for iRS = 1:numRandomStart
             SUM1MAX1mapName = ['working/SUM1MAX1map' 'image' num2str(i) 'scale' num2str(1)];
             load(SUM1MAX1mapName, 'SUM1map', 'MAX1map', 'M1RowShift', 'M1ColShift',...
                         'M1OriShifted', 'J');
-            SUM2map = mexc_ComputeSUM2( numOrient, MAX1map, TransformedTemplate, subsampleS2 );
+			for iRes = 1:numResolution
+				SUM2map(:,iRes) = mexc_ComputeSUM2( numOrient, MAX1map(iRes,:), TransformedTemplate, subsampleS2 );
+			end
             % random perturbation (to break ties arbitrarily for MAX2)
             for ii = 1:numel(SUM2map)
                 SUM2map{ii}(:) = SUM2map{ii}(:) + 1e-3 * ( rand(numel(SUM2map{ii}),1) - .5 );
+            end
+            % exclude the near-boundary region
+            for ii = 1:numel(SUM2map)
+            	SUM2map{ii}(:,[1:floor(templateSize(2)/2) end-floor(templateSize(2)/2):end]) = min(-1001,S2Thres-1);
+            	SUM2map{ii}([1:floor(templateSize(1)/2) end-floor(templateSize(1)/2):end],:) = min(-1001,S2Thres-1);
             end
 
             % compute MAX2, perform surround supression and get activations
@@ -245,8 +275,8 @@ for iRS = 1:numRandomStart
                 end
             else
                 % discard the activated instances that have a low S2 score
-                if iter > 5 % for the later iterations, increase the sparsity
-                    locationPerturbationFraction = .5;
+                if iter > floor(numIter/2) % for the later iterations, increase the sparsity
+                    locationPerturbationFraction = locationPerturbationFraction_final;
                 end
                 if strcmp('MatchingPursuit',supressionModeInEStep) == 1
                     tmpActivations = mexc_ComputeMAX2MP( SUM2map, int32(locationPerturbationFraction*partSize/subsampleS2), S2Thres );
@@ -258,22 +288,22 @@ for iRS = 1:numRandomStart
                     tmpActivations = tmpActivations( :,tmpActivations(4,:) > S2Thres );
                 end
             end
-            activations = [activations,[tmpActivations;single(i*ones(1,size(tmpActivations,2)))]];
+            activations = [activations,[single(i*ones(1,size(tmpActivations,2)));tmpActivations]];
         end
-        activations(1:2,:) = activations(1:2,:) * subsampleS2;
-        activatedCluster = ceil( ( activations(3,:) + 1 ) / nTransform );
-        activatedTransform = activations(3,:) + 1 - (activatedCluster-1) * nTransform;
-        activatedImg = activations(5,:);
+        activations(2:3,:) = activations(2:3,:) * subsampleS2;
+        activatedCluster = ceil( ( activations(5,:) + 1 ) / nTransform );
+        activatedTransform = activations(5,:) + 1 - (activatedCluster-1) * nTransform;
+        activatedImg = activations(1,:);
         % disp(sprintf('on average %.2f activations per image',size(activations,2)/numImage));
     end
 
     save( 'activations.mat', 'activations' );
-    disp('\n');
+    fprintf(1,'\n');
 
     % compute overall Score
-	scores = activations(4,:);
+	scores = activations(6,:);
     scores = max(scores,0);
-	overallScore = mean(scores);
+	overallScore = sum(scores); % use mean or sum ?
 	
 	if overallScore > bestOverallScore
 		bestOverallScore = overallScore;
@@ -290,11 +320,12 @@ end
 %% display the templates and cluster members for the best random starting point
 activations = bestActivations;
 S2Templates = bestS2Templates;
-activatedImg = activations(5,:);
-activatedCluster = ceil( ( activations(3,:) + 1 ) / nTransform ); % starts from 1
-activatedTransform = activations(3,:) + 1 - (activatedCluster-1) * nTransform; % starts from 1
+activatedImg = activations(1,:);
+activatedCluster = ceil( ( activations(5,:) + 1 ) / nTransform ); % starts from 1
+activatedTransform = activations(5,:) + 1 - (activatedCluster-1) * nTransform; % starts from 1
 mixing = bestMixing;
 aveLogL = bestAveLogL;
+cluster_is_nonempty = zeros(numCluster,1);
 for cc = 1:numCluster
 	ind = find(activatedCluster == cc);
 	% sample a subset of training postitives, if necessary
@@ -317,25 +348,32 @@ for cc = 1:numCluster
         tScale = 0; destHeight = templateSize(1); destWidth = templateSize(2); nScale = 1; reflection = 1;
 		% Crop detected image patch for visualization
 		srcIm = J{1};
-		cropped(iMember) = mexc_CropInstanceNew( {single(srcIm)},...
-			activations(2,ind(iMember))-1,...
-			activations(3,ind(iMember))-1,...
-			rotationRange(activatedTransform(ind(iMember))),0,reflection,destWidth,destHeight,1,1 );		
-	end
-	im = displayImages(cropped,10,templateSize(1),templateSize(2));
-	if ~isempty(im)
-		imwrite(im,sprintf('output/cluster%d.png',cc));
+		tmpNumOrient = 1;
+        cropped(iMember) = mexc_CropInstance( {single(srcIm)},...
+            activations(2,ind(iMember))-1,...
+            activations(3,ind(iMember))-1,...
+            rotationRange(activatedTransform(ind(iMember))),tScale,reflection,...
+            outRow{activatedTransform(ind(iMember))},outCol{activatedTransform(ind(iMember))},...
+            tmpNumOrient,nScale,destWidth,destHeight );		
 	end
 	
-	syms{cc} = -single(S2Templates{cc}.commonTemplate);
+	if ~isempty(ind) % cluster is not empty
+		im = displayImages(cropped,10,templateSize(1),templateSize(2));
+		imwrite(im,sprintf('output/cluster%d.png',cc));
+		cluster_is_nonempty(cc) = 1;
+		syms{cc} = -single(S2Templates{cc}.commonTemplate);
+	end
 end
-towrite = displayImages(syms,10,templateSize(1),templateSize(2));
+towrite = displayImages(syms(find(cluster_is_nonempty)),10,templateSize(1),templateSize(2));
 imwrite(towrite,sprintf('output/template.png'));
 save(sprintf('learning_result.mat'),'bestActivations','bestS2Templates','bestOverallScore','bestInitialClusters','bestAveLogL','bestMixing');
 
 % rank the learned templates
+nonempty_clusters = find(cluster_is_nonempty);
+mixing = mixing(nonempty_clusters);
+aveLogL = aveLogL(nonempty_clusters);
 [sorted idx] = sort( sqrt(mixing) .* aveLogL, 'descend' );
-for i = 1:numel(syms)
+for i = 1:numel(syms(nonempty_clusters))
     towrite = syms{i};
     if range(towrite) < 1
         towrite = 255;

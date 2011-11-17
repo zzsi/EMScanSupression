@@ -1,6 +1,6 @@
 % ZIPproject - create a zip file of the project
 
-zipfilename = sprintf('EMScanSupression_Clock_%s.zip',date);
+zipfilename = sprintf('EMScanSupression_%s.zip',date);
 
 %% specify files to put in ZIP
 filelist = {};

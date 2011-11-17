@@ -6,18 +6,17 @@ for img = 1:numImage
     load(multipleResolutionImageName,'J'); 
     for s = 1 : numScale
         storeExponentialModelName = ['storedExponentialModel' num2str(s)];   
-        load(storeExponentialModelName);
+        load(storeExponentialModelName,'allFilter','halfFilterSize');
         %% Prepare spaces for variables
-        allSizex = zeros(1, numResolution); allSizey = zeros(1, numResolution);
-        trackMap = cell(numResolution, numOrient);
-        SUM2map = cell(1, numResolution);
-        
-        MAX2score = single(zeros(1, numResolution));  % maximum log-likelihood score at each resolution
-        Fx = zeros(1, numResolution); Fy = zeros(1, numResolution); % maximum likelihood location at each resolution
+        allSizex = zeros(1, numResolution); allSizey = zeros(1, numResolution);        
         %% Compute SUM1 maps
         % use non-inscribed images to compute SUM1 maps, to avoid boundary effects 
         disp(['start filtering image ' num2str(img) ' at Gabor length ' num2str(halfFilterSize*2+1) ' at all resolutions']); tic
-        SUM1map = ApplyFilterfftSame(J, allFilter, localOrNot, localHalfx, localHalfy, doubleOrNot, thresholdFactor);  % filter testing image at all resolutions
+		SUM1map = cell(numResolution,numOrient);
+		for iRes = 1:numResolution
+			SUM1map(iRes,:) = ApplyFilterfftSame(J(iRes), allFilter, localOrNot, localHalfx, localHalfy, doubleOrNot, thresholdFactor);  % filter testing image at all resolutions
+        end
+		
         disp(['filtering time: ' num2str(toc) ' seconds']);
         %{
         %% inscribe the SUM1 maps into a square bounding box
@@ -40,45 +39,33 @@ for img = 1:numImage
         save(multipleResolutionImageName, 'J');
         %}
         
-        %% Still, prepare spaces for variables
-        for r=1:numResolution
-            [sizex, sizey] = size(SUM1map{r,1}); 
-            allSizex(r) = sizex; allSizey(r) = sizey; % sizes of images at multiple resolutions
-            sizexSubsample = floor(sizex/subsample); sizeySubsample = floor(sizey/subsample); 
-            SUM2map{r} = single(zeros(floor((sizex+sizeTemplatex)/subsample), floor((sizey+sizeTemplatey)/subsample)));  % log-likelihood score maps for testing images
-            averageMap{r} = single(zeros(sizex, sizey));
-            for (orient=1:numOrient)
-                MAX1map{r, orient} = single(zeros(sizexSubsample, sizeySubsample)); 
-                trackMap{r, orient} = single(zeros(sizexSubsample, sizeySubsample));
-            end
-            translatedTemplate{r} = single(zeros(sizex, sizey));  % symbolic sketch on testing image
-        end
-        
-        %% Compute average maps
-        %mexc_Average(numResolution, allSizex, allSizey, numOrient, halfFilterSize, SUM1map, averageMap, halfTemplatex, halfTemplatey, windowNormalizeOrNot, thresholdFactor);
-        
         %% Compute MAX1 maps and track maps
         disp(['start maxing image ' num2str(img) ' at Gabor length ' num2str(halfFilterSize*2+1) ' at all resolutions']); tic
         subsampleM1 = 1;  % to be safe, please refrain from setting it to be larger than 1 
-		[MAX1map ARGMAX1map M1RowShift M1ColShift M1OriShifted] = ...
-			mexc_ComputeMAX1( numOrient, SUM1map, locationShiftLimit,... %single(locationShiftLimit)/(halfFilterSize*2+1),...
-            orientShiftLimit, subsampleM1 );
-        %% sigmoid transformation (modified! was not here before)
-        for ii = 1:numel(MAX1map)
-            %mexc_Sigmoid(1, size(MAX1map{ii},1),size(MAX1map{ii},2), 1, saturation, MAX1map(ii));
-            %mexc_Sigmoid(1, size(SUM1map{ii},1),size(SUM1map{ii},2), 1, saturation, SUM1map(ii));
+		MAX1map = cell(numResolution,numOrient);
+		ARGMAX1map = cell(numResolution,numOrient);
+		for iRes = 1:numResolution
+			[MAX1map(iRes,:) ARGMAX1map(iRes,:) M1RowShift M1ColShift M1OriShifted] = ...
+				mexc_ComputeMAX1( numOrient, SUM1map(iRes,:), locationShiftLimit,... 
+				orientShiftLimit, subsampleM1 );
         end
-        
+		
+        %% sigmoid transformation (modified! was not here before)
         for ii = 1:numel(MAX1map)
             MAX1map{ii} = single( saturation*(2./(1.+exp(-2.*MAX1map{ii}/saturation))-1.) );
             SUM1map{ii} = single( saturation*(2./(1.+exp(-2.*SUM1map{ii}/saturation))-1.) );
         end
-        
         disp(['maxing time: ' num2str(toc) ' seconds']);
+        
+        % soft thresholding
+        for ii = 1:numel(SUM1map)
+        	SUM1map{ii}(:) = max(0,SUM1map{ii}(:)-S1softthres);
+            MAX1map{ii}(:) = max(0,MAX1map{ii}(:)-S1softthres);
+        end
+        
         %% Save the maps and spaces
         SUM1MAX1mapName = ['working/SUM1MAX1map' 'image' num2str(img) 'scale' num2str(s)];   
         save(SUM1MAX1mapName, 'SUM1map', 'MAX1map', 'M1RowShift', 'M1ColShift',...
-			'M1OriShifted', 'ARGMAX1map', 'averageMap', 'SUM2map', 'translatedTemplate',...
-            'MAX2score', 'Fx', 'Fy', 'allSizex', 'allSizey', 'J');
+			'M1OriShifted', 'ARGMAX1map', 'J');
     end
 end

@@ -8,8 +8,8 @@ maxDisplayImg = 60;
 % load the starting image number
 load partLocConfig templateSize category locationShiftLimit orientShiftLimit numElement numCluster numIter
 
-zipname = sprintf('EMScanSupression_Clock_%s.zip',date);
-imFolder = 'EMScanSupression_Clock';
+zipname = sprintf('EMScanSupression_%s.zip',date);
+imFolder = 'EMScanSupression';
 
 % delete the previous version
 html_dir = 'document';
@@ -139,6 +139,9 @@ fprintf( html, '\n<img src="%s" alt="" width="500"/> <br> <br>', sprintf('%s/%s'
 fprintf( html, '\n</p>\n' );
 
 %% show sketched images
+% 1) overlayed with the source image
+% 2) with different colors indicating different codewords
+% 3) with bounding boxes of codewords
 fprintf( html, ['<div style="border-bottom:1 solid #dddddd; margin-top:0.3em;"></div>\n<a name="templates"></a><p>' ...
 	'Sketching the observed images by overlaying the activated templates on them:' ...
 	'</p>\n']);
@@ -148,11 +151,17 @@ for i = 1:length(Iname)
 end
 fprintf( html, '\n</p>\n' );
 
-fprintf( html, '\n<p>Showing only the activated templates (for visual clarity): </p><p>' );
+fprintf( html, '\n<p>Showing only the activated templates (with color): </p><p>' );
+for i = 1:length(Iname)
+	fprintf( html, '<img src="%s" alt="" height=80/>', sprintf('%s/colorsketch_image%d.png',imFolder,i) );
+end
+
+fprintf( html, '\n<p>Showing only the activated templates (with bounding boxes): </p><p>' );
 for i = 1:length(Iname)
 	fprintf( html, '<img src="%s" alt="" height=80/>', sprintf('%s/sketch_image%d.png',imFolder,i) );
 end
 fprintf( html, '\n</p>\n' );
+
 
 
 %% finishing off
