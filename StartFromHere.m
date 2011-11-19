@@ -137,7 +137,7 @@ for iRS = 1:numRandomStart
                     activations(3,ind(iMember))-1,...
                     rotationRange(activatedTransform(ind(iMember))),tScale,reflection,...
                     outRow{activatedTransform(ind(iMember))},outCol{activatedTransform(ind(iMember))},...
-                    numOrient,nScale,destWidth,destHeight );
+                    numOrient,nScale,destHeight,destWidth );
 
                 % Crop detected image patch for visualization
                 srcIm = J{1+activations(4,ind(iMember))};
@@ -147,7 +147,7 @@ for iRS = 1:numRandomStart
                     activations(3,ind(iMember))-1,...
                     rotationRange(activatedTransform(ind(iMember))),tScale,reflection,...
                     outRow{activatedTransform(ind(iMember))},outCol{activatedTransform(ind(iMember))},...
-                    tmpNumOrient,nScale,destWidth,destHeight );
+                    tmpNumOrient,nScale,destHeight,destWidth );
 
                 % local max
                 subsampleM1 = 1;
@@ -299,7 +299,7 @@ for iRS = 1:numRandomStart
     end
 
     save( 'activations.mat', 'activations' );
-    fprintf(1,'\n');
+    %fprintf(1,'\n');
 
     % compute overall Score
 	scores = activations(6,:);
@@ -316,6 +316,8 @@ for iRS = 1:numRandomStart
 	end
 
 end
+
+fprintf(1,'\n');
 
 % -- now we have selected the best random starting point --
 %% display the templates and cluster members for the best random starting point

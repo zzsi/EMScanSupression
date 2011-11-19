@@ -172,9 +172,9 @@ void Compute()
 		activations.push_back( (float)bestTemplate );
 		activations.push_back( maxResponse );
 		/* inhibition */
-		for( y = (int)floor(bestY-(float)supressionRadius/scaling); y <  bestY+(float)supressionRadius/scaling; ++y )
+		for( y = (int)floor(bestY-((float)supressionRadius)/scaling); y <  bestY+((float)supressionRadius)/scaling; ++y )
 		{
-			for( x = (int)floor(bestX-(float)supressionRadius/scaling); x < bestX+(float)supressionRadius/scaling; ++x )
+			for( x = (int)floor(bestX-((float)supressionRadius)/scaling); x < bestX+((float)supressionRadius)/scaling; ++x )
 			{
 				if ((x>=0)&&(x<height[nResolution-1])&&(y>=0)&&(y<width[nResolution-1]))
 				{
