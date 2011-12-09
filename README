@@ -3,3 +3,6 @@ It is achieved by sparse EM clustering on a large number of image patches collec
 Sparse coding is used in the E step.
 
 Run StartFromHere.m in Matlab, and monitor intermediate results in the folder ./output/ .
+
+Then run GenerateHtml.m. This will generate a HTML page to document the experiment results. Please look
+into the document/ folder.
