@@ -180,18 +180,18 @@ fprintf( html, ['<div style="border-bottom:1 solid #dddddd; margin-top:0.3em;"><
 	'</p>\n']);
 fprintf( html, '\n<p>' );
 for i = 1:length(Iname)
-	fprintf( html, '<img src="%s" alt="" height=80/>', sprintf('%s/overlayed_image%d.png',imFolder,i) );
+	fprintf( html, '<img src="%s" alt="" height=80/>', sprintf('%s/overlayed_image%d.png',imFolder,selected_img(i)) );
 end
 fprintf( html, '\n</p>\n' );
 
 fprintf( html, '\n<p>Showing only the activated templates (with color): </p><p>' );
 for i = 1:length(Iname)
-	fprintf( html, '<img src="%s" alt="" height=80/>', sprintf('%s/colorsketch_image%d.png',imFolder,i) );
+	fprintf( html, '<img src="%s" alt="" height=80/>', sprintf('%s/colorsketch_image%d.png',imFolder,selected_img(i)) );
 end
 
 fprintf( html, '\n<p>Showing only the activated templates (with bounding boxes): </p><p>' );
 for i = 1:length(Iname)
-	fprintf( html, '<img src="%s" alt="" height=80/>', sprintf('%s/sketch_image%d.png',imFolder,i) );
+	fprintf( html, '<img src="%s" alt="" height=80/>', sprintf('%s/sketch_image%d.png',imFolder,selected_img(i)) );
 end
 fprintf( html, '\n</p>\n' );
 
@@ -204,5 +204,4 @@ fprintf(html, '</body> </html> \n');
 fclose(html);
 disp('finished generating Html.. check here:');
 disp([pwd '/' html_path]);
-
 close all
