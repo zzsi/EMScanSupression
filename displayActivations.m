@@ -7,28 +7,17 @@ load(storeExponentialModelName);
 load partLocConfig
 
 colors = colormap(hsv(numCluster));
-% colors = zeros(numCluster+1,3);
-% colors(:,1) = [1:-1/numCluster:0]';
-% colors(:,2) = [0:1/numCluster:1]';
-% colors(:,3) = [0:1/numCluster:1]';
-load activations
+load learning_result bestActivations bestS2Templates
+activations = bestActivations;
 showPartBoundingBox = true;
 partSizeX = templateSize(1);
 partSizeY = templateSize(2);
 
 %% preparation
 % transform the templates
-S2Templates = cell(numCluster,1);
-iter = numIter;
-for cc = 1:numCluster
-	load(sprintf('working/learnedmodel%d_iter%d.mat',cc,iter), 'numElement', 'selectedOrient', 'selectedx', 'selectedy', 'selectedlambda', 'selectedLogZ');
-	S2Templates{cc} = struct( 'selectedRow', single(selectedx -1 - floor(templateSize(1)/2)),...
-		'selectedCol', single(selectedy -1 - floor(templateSize(2)/2)), ...
-		'selectedOri', single(selectedOrient), 'selectedScale', zeros(length(selectedx),1,'single'), ...
-		'selectedLambda', single(selectedlambda), 'selectedLogZ', single(selectedLogZ) );
-end
+S2Templates = bestS2Templates;
 TransformedTemplate = cell(nTransform,numCluster);
-selectedScale = zeros(1,length(selectedx),'single');
+selectedScale = zeros(1,numElement,'single');
 for cc = 1:numCluster
 	for iT = 1:nTransform
 		templateScaleInd = templateTransform{iT}(1);
@@ -107,12 +96,12 @@ for img = selected_img
 		        val = 0;
 		    end
 		    gaborMM = [gaborMM; max(0,sqrt(val)-.2)];
+			gaborMM = [gaborMM; 1];
         end
 		
 		% render the sketches for this activated template
 		tmpMatchedSym = displayMatchedTemplate([size(J{iRes},1) size(J{iRes},2)],gaborXX,...
 			gaborYY,gaborOO,zeros(length(gaborXX),1,'single'),gaborMM,allSymbol,numOrient);
-		
         
 		scaling = double(size(J{end},1)) / double(size(J{iRes},1));
 		tmpMatchedSym = imresize(tmpMatchedSym,size(matchedSym),'nearest');
@@ -134,7 +123,7 @@ for img = selected_img
 		        yy = [yy,ones(1,largerPartSizeX)*y];
 		    end
 		    yy = [yy,repmat((1:largerPartSizeY),1,margin*2)];
-		    for x = [1:margin partSizeX-margin+1:partSizeX]
+		    for x = [1:margin largerPartSizeX-margin+1:largerPartSizeX]
 		        xx = [xx,ones(1,largerPartSizeY)*x];
 		    end
 		    inRow = single(xx-floor(largerPartSizeX/2)); inCol = single(yy-floor(largerPartSizeY/2));
