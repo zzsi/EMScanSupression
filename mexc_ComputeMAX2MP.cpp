@@ -36,7 +36,7 @@ int S2Thres; 					/* cut-off value for S2 score */
 void Compute()
 {
     int x, y;
-	float x2, y2;
+	int x2, y2;
     float maxResponse, r, scaling;
     int bestX, bestY;
     int iT, iR; /* index for template and reolution */
@@ -78,12 +78,18 @@ void Compute()
 			y2 = 0;
 			for (y=0; y<width[nResolution-1]; ++y )
 			{
-				x2 = 0;
+                y2 = MIN((int)floor((float)y*scaling),width[iR]-1);
 				for (x=0; x<height[nResolution-1]; ++x )
 				{
 					//mexPrintf("(%.3f %.3f)\n",(x2),(y2));
 					//mexPrintf("(%d %d)\n",(int)floor(x2),(int)floor(y2)*height[iR]);
-					r = S2Map[i][ (int)floor(x2)+(int)floor(y2)*height[iR] ];
+                    x2 = (int)MIN(floor((float)x*scaling),height[iR]-1);
+					r = S2Map[i][ x2 + y2 * height[iR] ];
+                    if(r>1000)
+                    {
+                        mexPrintf("iR=%d,iT=%d,i=%d (%d %d) of %d:(%d %d), %.3f, nT=%d, nR=%d\n",iR,iT,i,x2,y2,iR,width[iR],height[iR],r,nTemplate,nResolution);
+                        mexPrintf("S2=%.3f\n",S2Map[i][3+183*height[iR]]);
+                    }
 					if( r > maxOverTemplates[ind] )
 					{
 						maxOverTemplates[ind] = r;
@@ -91,7 +97,6 @@ void Compute()
 						resolutionTrace[ind] = iR;
 					}
 					ind++;
-					x2 += scaling;
 				}
 				y2 += scaling; /* (x2,y2): pixel location in the SUM2 map at resolution iR */
 			}
@@ -172,9 +177,9 @@ void Compute()
 		activations.push_back( (float)bestTemplate );
 		activations.push_back( maxResponse );
 		/* inhibition */
-		for( y = (int)floor(bestY-((float)supressionRadius)/scaling); y <  bestY+((float)supressionRadius)/scaling; ++y )
+		for( y = (int)floor(bestY-(float)supressionRadius/scaling); y <  bestY+(float)supressionRadius/scaling; ++y )
 		{
-			for( x = (int)floor(bestX-((float)supressionRadius)/scaling); x < bestX+((float)supressionRadius)/scaling; ++x )
+			for( x = (int)floor(bestX-(float)supressionRadius/scaling); x < bestX+(float)supressionRadius/scaling; ++x )
 			{
 				if ((x>=0)&&(x<height[nResolution-1])&&(y>=0)&&(y<width[nResolution-1]))
 				{
