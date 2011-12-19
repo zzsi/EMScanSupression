@@ -81,15 +81,8 @@ void Compute()
                 y2 = MIN((int)floor((float)y*scaling),width[iR]-1);
 				for (x=0; x<height[nResolution-1]; ++x )
 				{
-					//mexPrintf("(%.3f %.3f)\n",(x2),(y2));
-					//mexPrintf("(%d %d)\n",(int)floor(x2),(int)floor(y2)*height[iR]);
                     x2 = (int)MIN(floor((float)x*scaling),height[iR]-1);
 					r = S2Map[i][ x2 + y2 * height[iR] ];
-                    if(r>1000)
-                    {
-                        mexPrintf("iR=%d,iT=%d,i=%d (%d %d) of %d:(%d %d), %.3f, nT=%d, nR=%d\n",iR,iT,i,x2,y2,iR,width[iR],height[iR],r,nTemplate,nResolution);
-                        mexPrintf("S2=%.3f\n",S2Map[i][3+183*height[iR]]);
-                    }
 					if( r > maxOverTemplates[ind] )
 					{
 						maxOverTemplates[ind] = r;
